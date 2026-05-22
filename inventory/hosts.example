@@ -1,0 +1,11 @@
+[masters]
+master1.example.com
+
+[workers]
+worker1.example.com
+worker2.example.com
+worker3.example.com
+
+[k8s_cluster:children]
+masters
+workers

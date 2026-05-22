@@ -1,0 +1,42 @@
+---
+- name: Initialize Kubernetes control plane
+  hosts: masters
+  become: true
+  tasks:
+    - name: Check if cluster already initialized
+      stat:
+        path: /etc/kubernetes/admin.conf
+      register: kubeconfig
+
+    - name: Initialize cluster
+      command: >
+        kubeadm init
+        --pod-network-cidr={{ pod_network_cidr }}
+        --kubernetes-version={{ kubernetes_version }}
+      when: not kubeconfig.stat.exists
+      register: kubeadm_init
+
+    - name: Create .kube directory for root
+      file:
+        path: /root/.kube
+        state: directory
+        mode: '0700'
+
+    - name: Copy admin.conf
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /root/.kube/config
+        remote_src: yes
+        mode: '0600'
+
+    - name: Install CNI (Flannel)
+      command: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+      when: cni_plugin == 'flannel'
+
+    - name: Get join command
+      command: kubeadm token create --print-join-command
+      register: join_command
+
+    - name: Save join command
+      set_fact:
+        k8s_join_command: "{{ join_command.stdout }}"

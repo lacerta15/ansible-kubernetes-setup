@@ -1,0 +1,5 @@
+---
+kubernetes_version: "1.28"
+pod_network_cidr: "10.244.0.0/16"
+cni_plugin: flannel
+container_runtime: containerd

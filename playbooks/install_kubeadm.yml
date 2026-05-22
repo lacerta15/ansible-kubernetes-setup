@@ -1,0 +1,39 @@
+---
+- name: Install kubeadm, kubelet, kubectl
+  hosts: k8s_cluster
+  become: true
+  tasks:
+    - name: Install containerd
+      yum:
+        name: containerd.io
+        state: present
+      notify: start containerd
+    - name: Configure containerd
+      shell: |
+        containerd config default > /etc/containerd/config.toml
+        sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+    - name: Add Kubernetes repo
+      copy:
+        dest: /etc/yum.repos.d/kubernetes.repo
+        content: |
+          [kubernetes]
+          name=Kubernetes
+          baseurl=https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/repodata/repomd.xml.key
+    - name: Install kubeadm kubelet kubectl
+      yum:
+        name: [kubeadm, kubelet, kubectl]
+        state: present
+    - name: Enable kubelet
+      systemd:
+        name: kubelet
+        enabled: yes
+  handlers:
+    - name: start containerd
+      systemd:
+        name: containerd
+        state: started
+        enabled: yes
+        daemon_reload: yes
